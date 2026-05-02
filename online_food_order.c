@@ -1,4 +1,4 @@
-// Online Food Order
+// Online Food Ordering Queue System
 
 #include <stdio.h>
 #include <stdlib.h>
