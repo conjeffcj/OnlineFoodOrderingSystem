@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 
 // --- Data Structures ---
 typedef struct MenuItem {
@@ -29,6 +30,10 @@ typedef struct Transaction {
     struct Transaction* next;
 } Transaction;
 
+typedef struct User {
+    char name[50];
+} User;
+
 // --- Global Pointers ---
 MenuItem* menuHead = NULL;
 CartItem* cartHead = NULL;
@@ -46,13 +51,24 @@ MenuItem* findMenuItemById(int id);
 void addToCart(int menuId, int qty);
 void viewCart();                    
 float calculateTotal();
+void removeFromCart(int menuId);
 void confirmOrder();
 
 void enqueueTransaction(Transaction* t);
 void viewTransactionHistory();
 
 // --- Main Function ---
+void toLowerStr(char* str){
+    for(int i = 0; str[i]; i++){
+        str[i] = tolower(str[i]);
+    }
+} 
 int main() {
+    User user;
+    printf("Enter your name: ");
+    scanf("%s", user.name);
+
+printf("Welcome, %s!\n", user.name);
     loadMenu();
     int choice;
 
@@ -60,7 +76,11 @@ int main() {
         printf("\n--- Online Food Order System ---\n");
         printf("1. Menu\n2. View Cart\n3. Transaction History\n4. Exit\n");
         printf("Choose an option: ");
-        scanf("%d", &choice);
+        if(scanf("%d", &choice) != 1){
+        printf("Invalid input!\n");
+        while(getchar() != '\n');
+        continue;
+}
 
         switch(choice){
             case 1: menuFeature(); break;
@@ -140,7 +160,11 @@ void menuFeature() {
         displayMenu();
         printf("\n1. Filter Menu\n2. Add to Cart\n3. Back\n");
         printf("Choose an option: ");
-        scanf("%d", &choice);
+        if(scanf("%d", &choice) != 1){
+        printf("Invalid input!\n");
+        while(getchar() != '\n');
+        continue;
+}
 
         switch(choice){
             case 1:
@@ -152,7 +176,11 @@ void menuFeature() {
                 {
                     int id, qty;
                     printf("Enter Menu ID and Quantity: ");
-                    scanf("%d %d", &id, &qty);
+                    if(scanf("%d %d", &id, &qty) != 2){
+                    printf("Invalid input!\n");
+                    while(getchar() != '\n');
+                    continue;
+}
                     addToCart(id, qty);
                 }
                 break;
@@ -199,15 +227,33 @@ void sortMenuByPrice() {
 
 // Filter Menu by Category
 void filterMenuByCategory(char cat[]){
+    int found = 0;
     printf("\n--- MENU (Category: %s) ---\n", cat);
     printf("%-5s %-15s %-10s %-10s\n", "ID", "Name", "Category", "Price");
     MenuItem* temp = menuHead;
+
     while(temp != NULL){
-        if(strcmp(temp->category, cat) == 0){
-            printf("%-5d %-15s %-10s %.2f\n", temp->id, temp->name, temp->category, temp->price);
-        }
-        temp = temp->next;
+        char tempCat[20], input[20];
+
+        strcpy(tempCat, temp->category);
+        strcpy(input, cat);
+
+        toLowerStr(tempCat);
+        toLowerStr(input);
+
+    if(strcmp(tempCat, input) == 0){
+        printf("%-5d %-15s %-10s %.2f\n",
+            temp->id, temp->name, temp->category, temp->price);
+
+        found = 1;
     }
+
+    temp = temp->next;
+}
+
+if(!found){
+    printf("No items found in this category.\n");
+}
 }
 
 // Find Menu Item by ID
@@ -222,15 +268,64 @@ MenuItem* findMenuItemById(int id){
 
 // Add to Cart
 void addToCart(int menuId, int qty){
+    if(qty <= 0){
+    printf("Quantity must be greater than 0!\n");
+    return;
+}
+
     MenuItem* m = findMenuItemById(menuId);
     if(m == NULL){ printf("Menu item not found!\n"); return; }
+    CartItem* temp = cartHead;
+    while(temp != NULL){
+    if(temp->menuId == menuId){
+        temp->quantity += qty;
+        printf("Updated %s quantity to %d.\n", temp->name, temp->quantity);
+        return;
+    }
+    temp = temp->next;
+}
     CartItem* newItem = (CartItem*)malloc(sizeof(CartItem));
+    if(newItem == NULL){
+    printf("Memory allocation failed!\n");
+    return;
+}
     newItem->menuId = menuId; strcpy(newItem->name, m->name);
     newItem->quantity = qty; newItem->price = m->price; newItem->next = NULL;
 
     if(cartHead == NULL){ cartHead = newItem; }
     else { CartItem* temp = cartHead; while(temp->next != NULL) temp = temp->next; temp->next = newItem; }
     printf("Added %d x %s to cart.\n", qty, m->name);
+}
+
+// Remove from Cart
+void removeFromCart(int menuId){
+    if(cartHead == NULL){
+        printf("Cart is empty!\n");
+        return;
+    }
+
+    CartItem* temp = cartHead;
+    CartItem* prev = NULL;
+
+    while(temp != NULL){
+        if(temp->menuId == menuId){
+
+            if(prev == NULL){
+                cartHead = temp->next;
+            } else {
+                prev->next = temp->next;
+            }
+
+            printf("Item removed from cart.\n");
+            free(temp);
+            return;
+        }
+
+        prev = temp;
+        temp = temp->next;
+    }
+
+    printf("Item not found in cart!\n");
 }
 
 // View Cart (Includes Confirm Order)
@@ -246,11 +341,24 @@ void viewCart(){
             total += temp->price*temp->quantity; temp = temp->next;
         }
         printf("Total: %.2f\n", total);
-        printf("\n1. Confirm Order\n2. Back\nChoose an option: ");
+        printf("\n1. Confirm Order\n2. Remove Item\n3. Back\nChoose an option: ");
         scanf("%d", &choice);
-        if(choice == 1){ confirmOrder(); return; }
-        else if(choice == 2) return;
-        else printf("Invalid choice!\n");
+        if(choice == 1){
+        confirmOrder();
+        return;
+}
+    else if(choice == 2){
+    int id;
+    printf("Enter Menu ID to remove: ");
+    scanf("%d", &id);
+    removeFromCart(id);
+}
+    else if(choice == 3){
+    return;
+}
+    else{
+    printf("Invalid choice!\n");
+}
     }
 }
 
@@ -265,16 +373,32 @@ float calculateTotal(){
 // Confirm Order
 void confirmOrder(){
     if(cartHead == NULL){ printf("Cart is empty.\n"); return; }
+    float total = calculateTotal();
     CartItem* temp = cartHead;
     int orderId = (transRear == NULL) ? 1 : transRear->orderId + 1;
     while(temp != NULL){
         Transaction* t = (Transaction*)malloc(sizeof(Transaction));
+        if(t == NULL){
+        printf("Memory allocation failed!\n");
+        return;
+}
         t->orderId = orderId; strcpy(t->name, temp->name); t->quantity = temp->quantity;
         t->price = temp->price; t->next = NULL; enqueueTransaction(t);
         temp = temp->next;
     }
+    printf("\n--- ORDER SUMMARY ---\n");
+
+    CartItem* temp2 = cartHead;
+
+    while(temp2 != NULL){
+    printf("%-15s x%d = %.2f\n",
+        temp2->name,
+        temp2->quantity,
+        temp2->price * temp2->quantity);
+    temp2 = temp2->next;
+}
     while(cartHead != NULL){ CartItem* del = cartHead; cartHead = cartHead->next; free(del); }
-    printf("Order confirmed! Total: %.2f\n", calculateTotal());
+    printf("Order confirmed! Total: %.2f\n", total);
 }
 
 // Enqueue Transaction (Queue)
