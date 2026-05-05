@@ -1,4 +1,4 @@
-// Online Food Ordering Queue System
+// Online Food Order
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -126,7 +126,8 @@ void loadMenu() {
     menuHead = m1;
     m1->next = m2; m2->next = m3; m3->next = m4; m4->next = m5;
     m5->next = m6; m6->next = m7; m7->next = m8; m8->next = m9;
-    m9->next = m10; m10->next = m11;
+    m9->next = m10; m10->next = m11; m11->next = m12; m12 ->next = m13;
+    m13 ->next = m14; m14 ->next = m15; m15 ->next = NULL; 
 }
 
 // Combined Menu Feature
