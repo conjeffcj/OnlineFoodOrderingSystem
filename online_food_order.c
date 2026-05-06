@@ -65,8 +65,9 @@ void toLowerStr(char* str){
 } 
 int main() {
     User user;
-    printf("Enter your name: ");
-    scanf("%s", user.name);
+   printf("Enter your name: ");
+   fgets(user.name, sizeof(user.name), stdin);
+   user.name[strcspn(user.name, "\n")] = '\0';
 
 printf("Welcome, %s!\n", user.name);
     loadMenu();
